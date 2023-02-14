@@ -17,8 +17,8 @@
 
 from nonstationary_mbml.experiments import config as config_lib
 from nonstationary_mbml.experiments import distributions
-from nonstationary_mbml.experiments import live_and_die_agents
-from nonstationary_mbml.experiments import ptw_agents
+from nonstationary_mbml.experiments import live_and_die_predictors
+from nonstationary_mbml.experiments import ptw_predictors
 from nonstationary_mbml.experiments import trajectory_generators
 
 DISTRIBUTIONS = {
@@ -46,13 +46,13 @@ TRAJECTORY_GENERATORS = {
         trajectory_generators.LINTrajectoryGenerator,
 }
 
-OPTIMAL_AGENTS = {
-    'ptw': ptw_agents.PTWAgent,
-    'lin': live_and_die_agents.LADAgent,
+OPTIMAL_PREDICTORS = {
+    'ptw': ptw_predictors.PTWPredictor,
+    'lin': live_and_die_predictors.LADPredictor,
 }
 
 
-# The following function follows the protocol constants.DataGeneratorBuilder.
+# The following function follows the protocol constants.DataGeneratorBuilder.
 def build_data_generator(
     config: config_lib.DataConfig) -> trajectory_generators.TrajectoryGenerator:
   """Returns a data generator from a meta_learning data config."""

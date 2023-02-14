@@ -13,9 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Agents used in the project.
+"""Predictors used in the project.
 
-The interface is general and accept any 'unrolling' agent, basically
+The interface is general and accept any 'unrolling' predictor, basically
 implementing a jax.lax.scan function under the cover.
 """
 
@@ -30,8 +30,8 @@ import jax.numpy as jnp
 from nonstationary_mbml.experiments import distributions
 
 
-class Agent(abc.ABC):
-  """Agents used for predictions."""
+class Predictor(abc.ABC):
+  """Predictors used for predictions."""
 
   @abc.abstractmethod
   def initial_state(
@@ -40,17 +40,17 @@ class Agent(abc.ABC):
       rng: chex.PRNGKey,
       batch_size: int,
   ) -> Any:
-    """Sample an initial state for the agent.
+    """Sample an initial state for the predictor.
 
     Can be independent of params as well as rng.
     Args:
-      params: the parameters of the agent, can be anything
+      params: the parameters of the predictor, can be anything
       rng: a random key
       batch_size: the number of initial states to return
 
     Returns:
       init_state: a list or array of size batch_size, containing the states of
-        the agent
+        the predictor
     """
 
   @abc.abstractmethod
@@ -75,31 +75,31 @@ class Agent(abc.ABC):
       batch: chex.Array,
       init_state: Any,
   ) -> chex.Array:
-    """Unroll our agent on a batch of trajectories.
+    """Unroll our predictor on a batch of trajectories.
 
     Args:
-      params: the parameters of the agent, can be anything
+      params: the parameters of the predictor, can be anything
       rng: a random key
       batch: a (batch_size, seq_length,)+obs_shape tensor, containing the
-        observations for the agent
-      init_state: the initial state of the agent
+        observations for the predictor
+      init_state: the initial state of the predictor
 
     Returns:
-      predictions: a (batch_size, seq_length, parameter_size) tensor,
-        containing the output of the agent, i.e., predictions of the next value
-        in the sequence
+      predictions: a (batch_size, seq_length, parameter_size) tensor, containing
+      the output of the predictor, i.e., predictions of the next value in the
+      sequence
     """
 
 
-class InContextAgent(Agent):
-  """An agent without state that only looks at the current context."""
+class InContextPredictor(Predictor):
+  """A predictor without state that only looks at the current context."""
 
   def __init__(self, predictor: Callable[[chex.Array], chex.Array]):
     self._predictor_init, self._predictor_apply = hk.transform(predictor)
 
   def initial_state(self, params: hk.Params, rng: chex.PRNGKey,
                     batch_size: int) -> Optional[Any]:
-    # No state for this agent
+    # No state for this predictor
     return None
 
   def init_params(self, rng: chex.PRNGKey, batch_init: chex.Array,
@@ -114,10 +114,10 @@ class InContextAgent(Agent):
     return output, None
 
 
-class RNNAgent(Agent):
-  """An agent implementing an RNN.
+class RNNPredictor(Predictor):
+  """A predictor implementing an RNN.
 
-  This class doesn't inherit ScanAgent because it is using its own haiku
+  This class doesn't inherit ScanPredictor because it is using its own haiku
   behaviour.
   """
 
@@ -147,11 +147,11 @@ class RNNAgent(Agent):
     return self._unroll(params, rng, x=batch, initial_state=init_state)
 
 
-class ScanAgent(Agent, abc.ABC):
-  """Implementation of agents using jax.lax.scan and an update function.
+class ScanPredictor(Predictor, abc.ABC):
+  """Implementation of predictors using jax.lax.scan and an update function.
 
   The prior is the output in the initial state.
-  The only things the agent has to provide is how to update its
+  The only things the predictor has to provide is how to update its
   state, and what to output from this state.
   """
 
@@ -161,7 +161,7 @@ class ScanAgent(Agent, abc.ABC):
       rng: chex.PRNGKey,
       state: chex.Array,
   ) -> chex.Array:
-    """Returns what the agent will output at a given state."""
+    """Returns what the predictor will output at a given state."""
 
   @abc.abstractmethod
   def update_state(
@@ -204,10 +204,10 @@ class ScanAgent(Agent, abc.ABC):
     return predictions
 
 
-class OptimalAgent(ScanAgent, abc.ABC):
-  """Abstract class for optimal agents.
+class OptimalPredictor(ScanPredictor, abc.ABC):
+  """Abstract class for optimal predictors.
 
-  The agent must also define what prior and posterior distribution it uses.
+  The predictor must also define what prior and posterior distribution it uses.
   They are chosen carefully to mathematically match.
   Params are the parameters of the prior distribution.
   """
@@ -215,7 +215,8 @@ class OptimalAgent(ScanAgent, abc.ABC):
   def init_params(self, rng: chex.PRNGKey, batch_init: chex.Array,
                   state_init: chex.Array) -> hk.Params:
     raise NotImplementedError(
-        'Optimal agents do not provide parameter initialization.')
+        'Optimal predictors do not provide parameter initialization.'
+    )
 
   def initial_state(
       self,
@@ -256,8 +257,8 @@ class OptimalAgent(ScanAgent, abc.ABC):
     return jnp.concatenate(state_elements, axis=-1)
 
 
-class OptimalCategoricalAgent(OptimalAgent):
-  """Optimal bayesian agent for Categorical distributions.
+class OptimalCategoricalPredictor(OptimalPredictor):
+  """Optimal bayesian predictor for Categorical distributions.
 
   State is (alpha_1, ..., alpha_n), parameters of a Dirichlet(n) distribution
   (conjugate prior).

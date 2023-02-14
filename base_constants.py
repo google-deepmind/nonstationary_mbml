@@ -21,8 +21,8 @@ from typing import Any
 import chex
 from typing_extensions import Protocol
 
-from nonstationary_mbml import agents
 from nonstationary_mbml import base_config as config_lib
+from nonstationary_mbml import predictors
 
 
 class DataGenerator(abc.ABC):
@@ -59,19 +59,22 @@ class Evaluator(abc.ABC):
   """Abstract evaluator class."""
 
   @abc.abstractmethod
-  def step(self, agent_params: Any, agent_state: Any,
-           rng: chex.PRNGKey) -> dict[str, Any]:
-    """Evaluates the agent and returns a log dict."""
+  def step(
+      self, predictor_params: Any, predictor_state: Any, rng: chex.PRNGKey
+  ) -> dict[str, Any]:
+    """Evaluates the predictor and returns a log dict."""
 
 
 class EvaluatorBuilder(Protocol):
 
-  def __call__(self, agent: agents.Agent,
-               eval_config: config_lib.EvalConfig) -> Evaluator:
-    """Returns an evaluator from a training agent, a loss_fn and a config.
+  def __call__(
+      self, predictor: predictors.Predictor, eval_config: config_lib.EvalConfig
+  ) -> Evaluator:
+    """Returns an evaluator from a training predictor, a loss_fn and a config.
 
     Args:
-      agent: The agent being trained. Most likely a neural network. Parameters
-        will be passed in the main loop, not when building the evaluator.
+      predictor: The predictor being trained. Most likely a neural network.
+        Parameters will be passed in the main loop, not when building the
+        evaluator.
       eval_config: The evaluation config. Depends on the experiment being run.
     """

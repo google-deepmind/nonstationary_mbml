@@ -27,8 +27,8 @@ import numpy as np
 import optax
 import tree
 
-from nonstationary_mbml import agents
 from nonstationary_mbml import base_constants
+from nonstationary_mbml import predictors
 from nonstationary_mbml.experiments import config as config_lib
 from nonstationary_mbml.experiments import constants as meta_learning_constants
 from nonstationary_mbml.experiments import trajectory_generators as tg
@@ -47,15 +47,15 @@ class MetaLearningEvaluator(base_constants.Evaluator):
 
   def __init__(
       self,
-      agent: agents.Agent,
+      predictor: predictors.Predictor,
       data_generator: tg.TrajectoryGenerator,
       batch_size: int,
       seq_length: int,
-      optimal_agents: Optional[dict[str, agents.Agent]] = None,
+      optimal_predictors: Optional[dict[str, predictors.Predictor]] = None,
       chunk_length: Optional[int] = None,
   ) -> None:
-    self._agent = agent
-    self._optimal_agents = optimal_agents
+    self._predictor = predictor
+    self._optimal_predictors = optimal_predictors
     self._data_generator = data_generator
     self._batch_size = batch_size
     self._seq_length = seq_length
@@ -69,35 +69,38 @@ class MetaLearningEvaluator(base_constants.Evaluator):
 
     self._dist_entropy = _dist_entropy
 
-    if optimal_agents is not None:
-      self._optimal_agents_init_state = dict()
+    if optimal_predictors is not None:
+      self._optimal_predictors_init_state = dict()
 
-      for agent_name, optimal_agent in self._optimal_agents.items():
-        self._optimal_agents_init_state[
-            agent_name] = optimal_agent.initial_state(
-                None, None, batch_size=batch_size)
+      for predictor_name, optimal_predictor in self._optimal_predictors.items():
+        self._optimal_predictors_init_state[predictor_name] = (
+            optimal_predictor.initial_state(None, None, batch_size=batch_size)
+        )
 
-  def step(self, agent_params: Any, agent_state: Any,
-           rng: chex.PRNGKey) -> dict[str, Any]:
-    """Evaluates the agent and returns a log dict."""
+  def step(
+      self, predictor_params: Any, predictor_state: Any, rng: chex.PRNGKey
+  ) -> dict[str, Any]:
+    """Evaluates the predictor and returns a log dict."""
     rngs = hk.PRNGSequence(rng)
     data_batch, distribution_params = self._data_generator.sample(
         rng, self._batch_size, self._seq_length)
     if self._chunk_length is None:
-      logits, _ = self._agent.unroll(agent_params, next(rngs), data_batch,
-                                     agent_state)
+      logits, _ = self._predictor.unroll(
+          predictor_params, next(rngs), data_batch, predictor_state
+      )
     else:
       final_logits = []
-      agent_state = copy.deepcopy(agent_state)
+      predictor_state = copy.deepcopy(predictor_state)
       for i in range(math.ceil(self._seq_length / self._chunk_length)):
         data_chunk = data_batch[:, i * self._chunk_length:(i + 1) *
                                 self._chunk_length]
-        logits, states = self._agent.unroll(agent_params, next(rngs),
-                                            data_chunk, agent_state)
+        logits, states = self._predictor.unroll(
+            predictor_params, next(rngs), data_chunk, predictor_state
+        )
         if states is not None:
-          agent_state = tree.map_structure(lambda x: x[:, -1], states)
+          predictor_state = tree.map_structure(lambda x: x[:, -1], states)
         else:
-          agent_state = None
+          predictor_state = None
         final_logits.append(logits)
       logits = np.concatenate(final_logits, axis=1)
     true_entropy = self._dist_entropy(distribution_params[:, 1:])
@@ -106,57 +109,66 @@ class MetaLearningEvaluator(base_constants.Evaluator):
     mean_regret = jnp.mean(instantaneous_regret)
     cumulative_regret = jnp.mean(jnp.sum(instantaneous_regret, axis=1))
 
-    if self._optimal_agents is not None:
+    if self._optimal_predictors is not None:
       optimal_logits = dict()
       optimal_cumulative_regret = dict()
       optimal_instantaneous_regret = dict()
 
-      for agent_name, optimal_agent in self._optimal_agents.items():
-        init_state = copy.deepcopy(self._optimal_agents_init_state[agent_name])
-        optimal_logits[agent_name] = optimal_agent.unroll(
-            params=None,
-            rng=next(rngs),
-            batch=data_batch,
-            init_state=init_state)
-        optimal_instantaneous_regret[agent_name] = _compute_true_cross_entropy(
-            optimal_logits[agent_name], distribution_params) - true_entropy
-        optimal_cumulative_regret[agent_name] = jnp.mean(
-            jnp.sum(optimal_instantaneous_regret[agent_name], axis=1))
+      for predictor_name, optimal_predictor in self._optimal_predictors.items():
+        init_state = copy.deepcopy(
+            self._optimal_predictors_init_state[predictor_name]
+        )
+        optimal_logits[predictor_name] = optimal_predictor.unroll(
+            params=None, rng=next(rngs), batch=data_batch, init_state=init_state
+        )
+        optimal_instantaneous_regret[predictor_name] = (
+            _compute_true_cross_entropy(
+                optimal_logits[predictor_name], distribution_params
+            )
+            - true_entropy
+        )
+        optimal_cumulative_regret[predictor_name] = jnp.mean(
+            jnp.sum(optimal_instantaneous_regret[predictor_name], axis=1)
+        )
 
     log_dict = {}
     log_dict['logits'] = logits
     log_dict['mean_regret'] = mean_regret
     log_dict['cumulative_regret'] = cumulative_regret
 
-    if self._optimal_agents is not None:
-      for agent_name, optimal_agent in self._optimal_agents.items():
-        log_dict[f'optimal_cumulative_regret/{agent_name}'] = (
-            optimal_cumulative_regret[agent_name]
+    if self._optimal_predictors is not None:
+      for predictor_name, optimal_predictor in self._optimal_predictors.items():
+        log_dict[f'optimal_cumulative_regret/{predictor_name}'] = (
+            optimal_cumulative_regret[predictor_name]
         )
-        log_dict[f'cumulative_regret_above_optimal/{agent_name}'] = (
-            cumulative_regret - optimal_cumulative_regret[agent_name]
+        log_dict[f'cumulative_regret_above_optimal/{predictor_name}'] = (
+            cumulative_regret - optimal_cumulative_regret[predictor_name]
         )
 
     return log_dict
 
 
-# The following function follows the protocol base_constants.EvaluatorBuilder.
-def build_evaluator(agent: agents.Agent,
-                    config: config_lib.EvalConfig) -> MetaLearningEvaluator:
+# The following function follows the protocol base_constants.EvaluatorBuilder.
+def build_evaluator(
+    predictor: predictors.Predictor, config: config_lib.EvalConfig
+) -> MetaLearningEvaluator:
   """Returns an evaluator from a meta_learning eval config."""
-  if config.optimal_agents is not None:
-    optimal_agents = dict()
-    for optimal_agent in config.optimal_agents:
-      optimal_agents[optimal_agent] = meta_learning_constants.OPTIMAL_AGENTS[
-          optimal_agent](**config.optimal_agents_kwargs[optimal_agent])
+  if config.optimal_predictors is not None:
+    optimal_predictors = dict()
+    for optimal_predictor in config.optimal_predictors:
+      optimal_predictors[optimal_predictor] = (
+          meta_learning_constants.OPTIMAL_PREDICTORS[optimal_predictor](
+              **config.optimal_predictors_kwargs[optimal_predictor]
+          )
+      )
   else:
-    optimal_agents = None
+    optimal_predictors = None
   data_generator = meta_learning_constants.build_data_generator(config.data)
   return MetaLearningEvaluator(
-      agent=agent,
+      predictor=predictor,
       data_generator=data_generator,
       batch_size=config.batch_size,
       seq_length=config.seq_length,
-      optimal_agents=optimal_agents,
+      optimal_predictors=optimal_predictors,
       chunk_length=config.chunk_length,
   )

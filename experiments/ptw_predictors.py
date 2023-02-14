@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""PTW agent classes."""
+"""PTW predictor classes."""
 
 import abc
 import copy
@@ -22,7 +22,7 @@ from typing import Any, Sequence
 import chex
 import numpy as np
 
-from nonstationary_mbml import agents
+from nonstationary_mbml import predictors
 
 
 def _leading_zeros(x):
@@ -121,13 +121,13 @@ class PTWState:
   t: int
 
 
-class PTWAgent(agents.Agent, abc.ABC):
-  """Partition tree weighting agent.
+class PTWPredictor(predictors.Predictor, abc.ABC):
+  """Partition tree weighting predictor.
 
   WARNING:
     PTW outputs a prediction before seeing the first token, which is
-    inconsistent with our agent interface. Thus, we omit the first prediction
-    and append a dummy output at the end.
+    inconsistent with our predictor interface. Thus, we omit the first
+    prediction and append a dummy output at the end.
 
   Attributes:
     d: depth
@@ -198,7 +198,7 @@ class PTWAgent(agents.Agent, abc.ABC):
       batch: chex.Array,
       init_state: chex.Array,
   ) -> chex.Array:
-    # Params are not used in this agent.
+    # Params are not used in this predictor.
     del params
 
     def scan_update_output(
@@ -220,8 +220,8 @@ class PTWAgent(agents.Agent, abc.ABC):
     predictions = np.stack(predictions, axis=0)
 
     # PTW outputs a prediction before seeing the first token, which is
-    # inconsistent with our agent interface. Thus, we omit the first prediction
-    # and append a dummy output at the end.
+    # inconsistent with our predictor interface. Thus, we omit the first
+    # prediction and append a dummy output at the end.
     predictions = np.concatenate(
         [predictions[1:],
          np.full_like(predictions[:1], np.nan)], axis=0)

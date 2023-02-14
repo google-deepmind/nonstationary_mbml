@@ -30,7 +30,7 @@ class TrainConfig:
   seq_length_fixed: bool = True
   batch_size: int = 128
   clip_grad_norm: float = 1.
-  reset_agent_init_state: bool = True
+  reset_predictor_init_state: bool = True
   gradient_chunk_length: Optional[int] = None
 
 

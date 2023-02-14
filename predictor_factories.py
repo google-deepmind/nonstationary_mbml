@@ -13,11 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Factories to initialise agents based on different neural net architectures.
+"""Factories to initialise predictors based on different neural architectures.
 
-To create a new agent you need to register a function that returns an agent
-based on a configuration and output size. The agent factory should be uniquely
-identified by its name.
+To create a new predictor you need to register a function that returns a
+predictor based on a configuration and output size. The predictor factory should
+be uniquely identified by its name.
 """
 
 import functools
@@ -28,7 +28,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 
-from nonstationary_mbml import agents
+from nonstationary_mbml import predictors
 from nonstationary_mbml.models import basic
 from nonstationary_mbml.models import positional_encodings as pos_encs_lib
 from nonstationary_mbml.models import transformer
@@ -36,22 +36,24 @@ from nonstationary_mbml.models import transformer
 
 _Config = dict[str, Any]
 
-# A function that can be used to create an Agent.
-_AgentFactory = Callable[[int, _Config], agents.Agent]
+# A function that can be used to create a Predictor.
+_PredictorFactory = Callable[[int, _Config], predictors.Predictor]
 
 # Maps names to the correct agent factory.
-AGENT_FACTORIES: dict[str, _AgentFactory] = {}
+PREDICTOR_FACTORIES: dict[str, _PredictorFactory] = {}
 
 
-def _register_agent_factory(
-    name: str) -> Callable[[_AgentFactory], _AgentFactory]:
+def _register_predictor_factory(
+    name: str,
+) -> Callable[[_PredictorFactory], _PredictorFactory]:
   """Decorator for registering a function as a factory using the `name` id."""
   if name.lower() != name:
     raise ValueError(
-        'Please use lower-case names to register the agent factories.')
+        'Please use lower-case names to register the predictor factories.'
+    )
 
-  def wrap(fn: _AgentFactory) -> _AgentFactory:
-    AGENT_FACTORIES[name] = fn
+  def wrap(fn: _PredictorFactory) -> _PredictorFactory:
+    PREDICTOR_FACTORIES[name] = fn
     return fn
 
   return wrap
@@ -60,11 +62,13 @@ def _register_agent_factory(
 class MLPWrappedRNN(hk.RNNCore):
   """A wrapper for RNNs to add MLP layers."""
 
-  def __init__(self,
-               core: Type[hk.RNNCore],
-               before_mlp_layers: Sequence[int] = (),
-               after_mlp_layers: Sequence[int] = (),
-               **core_kwargs):
+  def __init__(
+      self,
+      core: Type[hk.RNNCore],
+      before_mlp_layers: Sequence[int] = (),
+      after_mlp_layers: Sequence[int] = (),
+      **core_kwargs
+  ):
     super().__init__()
     self._core = core(**core_kwargs)
     self._before_mlp = hk.nets.MLP(before_mlp_layers)
@@ -104,7 +108,8 @@ class SlidingWindowTransformer:
         b=batch_size,
         h=history_batch_size,
         c=self._context_length,
-        f=num_features)
+        f=num_features,
+    )
     out = jax.vmap(self._transformer, in_axes=1, out_axes=1)(x_batched_history)
     return einops.rearrange(
         out,
@@ -112,15 +117,16 @@ class SlidingWindowTransformer:
         b=batch_size,
         h=history_batch_size,
         c=self._context_length,
-        o=self._output_size)
+        o=self._output_size,
+    )
 
 
-def _make_rnn_agent(
+def _make_rnn_predictor(
     output_size: int,
     architecture_config: _Config,
     rnn_core: Type[hk.RNNCore],
-) -> agents.Agent:
-  """Returns an RNN agent based on config."""
+) -> predictors.Predictor:
+  """Returns an RNN predictor based on config."""
   unroll_factory = basic.make_rnn(
       output_size=output_size,
       rnn_core=rnn_core,
@@ -132,54 +138,64 @@ def _make_rnn_agent(
 
   def initial_state_factory(batch_size: int):
     return rnn_core(**architecture_config).initial_state(batch_size)
-  return agents.RNNAgent(unroll_factory, initial_state_factory)
+
+  return predictors.RNNPredictor(unroll_factory, initial_state_factory)
 
 
-_register_agent_factory('rnn')(
-    functools.partial(_make_rnn_agent, rnn_core=MLPWrappedRNN))
+_register_predictor_factory('rnn')(
+    functools.partial(_make_rnn_predictor, rnn_core=MLPWrappedRNN)
+)
 
 
-@_register_agent_factory('transformer')
-def _make_transformer_agent(output_size: int,
-                            architecture_config: _Config) -> agents.Agent:
-  """Returns Transformer agent based on config."""
+@_register_predictor_factory('transformer')
+def _make_transformer_predictor(
+    output_size: int, architecture_config: _Config
+) -> predictors.Predictor:
+  """Returns Transformer predictor based on config."""
   positional_encodings_params = {}
   if 'positional_encodings_params' in architecture_config:
     positional_encodings_params = architecture_config[
-        'positional_encodings_params']
-  architecture_config[
-      'positional_encodings_params'] = pos_encs_lib.POS_ENC_PARAMS_TABLE[
-          architecture_config['positional_encodings']](
-              **positional_encodings_params)
+        'positional_encodings_params'
+    ]
+  architecture_config['positional_encodings_params'] = (
+      pos_encs_lib.POS_ENC_PARAMS_TABLE[
+          architecture_config['positional_encodings']
+      ](**positional_encodings_params)
+  )
   architecture_config['positional_encodings'] = pos_encs_lib.POS_ENC_TABLE[
-      architecture_config['positional_encodings']]
+      architecture_config['positional_encodings']
+  ]
   predictor = transformer.make_transformer_encoder(
       output_size=output_size,
       return_all_outputs=True,
       causal_masking=True,
       **architecture_config,
   )
-  return agents.InContextAgent(predictor)
+  return predictors.InContextPredictor(predictor)
 
 
-@_register_agent_factory('sliding_window_transformer')
-def _make_sliding_window_transformer_agent(
-    output_size: int, architecture_config: _Config) -> agents.Agent:
-  """Returns Transformer agent based on config."""
+@_register_predictor_factory('sliding_window_transformer')
+def _make_sliding_window_transformer_predictor(
+    output_size: int, architecture_config: _Config
+) -> predictors.Predictor:
+  """Returns Transformer predictor based on config."""
   positional_encodings_params = {}
   if 'positional_encodings_params' in architecture_config:
     positional_encodings_params = architecture_config[
-        'positional_encodings_params']
-  architecture_config[
-      'positional_encodings_params'] = pos_encs_lib.POS_ENC_PARAMS_TABLE[
-          architecture_config['positional_encodings']](
-              **positional_encodings_params)
+        'positional_encodings_params'
+    ]
+  architecture_config['positional_encodings_params'] = (
+      pos_encs_lib.POS_ENC_PARAMS_TABLE[
+          architecture_config['positional_encodings']
+      ](**positional_encodings_params)
+  )
   architecture_config['positional_encodings'] = pos_encs_lib.POS_ENC_TABLE[
-      architecture_config['positional_encodings']]
+      architecture_config['positional_encodings']
+  ]
 
   context_len = architecture_config['context_length']
   model_kwargs = {
       k: v for k, v in architecture_config.items() if k != 'context_length'
   }
   predictor = SlidingWindowTransformer(output_size, context_len, model_kwargs)
-  return agents.InContextAgent(predictor)
+  return predictors.InContextPredictor(predictor)

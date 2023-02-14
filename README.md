@@ -24,9 +24,9 @@ It is based on [JAX](https://jax.readthedocs.io) and [Haiku](https://dm-haiku.re
 |   ├── constants.py                - Experiment constants
 |   ├── distributions.py            - Probability distributions
 |   ├── evaluator.py                - Evaluation loop
-|   └── live_and_die_agents.py      - LAD (Willems, 1996)
+|   └── live_and_die_predictors.py  - LAD (Willems, 1996)
 |   └── local_launch.py             - Local launch script
-|   └── ptw_agents.py               - PTW (Veness et al., 2013)
+|   └── ptw_predictors.py           - PTW (Veness et al., 2013)
 |   └── trajectory_generators.py    - Trajectory generators
 |
 ├── models
@@ -36,8 +36,8 @@ It is based on [JAX](https://jax.readthedocs.io) and [Haiku](https://dm-haiku.re
 |   └── transformer.py              - Transformer (Vaswani et al., 2017)
 |
 ├── README.md
-├── agent_factories.py              - Factories to initialize agents
-├── agents.py                       - Agent interface
+├── predictor_factories.py          - Factories to initialize predictors
+├── predictors.py                   - Predictor interface
 ├── base_config.py                  - Base configurations
 ├── base_constants.py               - Base constants
 ├── requirements.txt                - Dependencies

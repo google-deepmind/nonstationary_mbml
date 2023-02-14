@@ -31,14 +31,14 @@ import optax
 import tqdm
 import tree
 
-from nonstationary_mbml import agent_factories
-from nonstationary_mbml import agents
 from nonstationary_mbml import base_config as config_lib
 from nonstationary_mbml import base_constants
+from nonstationary_mbml import predictor_factories
+from nonstationary_mbml import predictors
 
 
 def _make_whole_loss_fn(
-    agent: agents.Agent
+    predictor: predictors.Predictor,
 ) -> Callable[[hk.Params, chex.PRNGKey, chex.Array, Any], tuple[float, Any]]:
   """Returns the loss function for update_parameters_whole_sequence."""
 
@@ -54,7 +54,7 @@ def _make_whole_loss_fn(
       init_state: The initial state of the model. Can be anything, but usually
         will be an ArrayTree (like LSTM state).
     """
-    output, states = agent.unroll(params, rng, inputs, init_state)
+    output, states = predictor.unroll(params, rng, inputs, init_state)
     last_state = _get_last_state(states)
     predictions = output[:, :-1]
     targets = inputs[:, 1:]
@@ -126,9 +126,11 @@ def _compute_updates_from_chunks(
 
 
 def _make_chunks_loss_fn(
-    agent: agents.Agent
-) -> Callable[[hk.Params, chex.PRNGKey, chex.Array, chex.Array, Any, bool],
-              tuple[float, Any]]:
+    predictor: predictors.Predictor,
+) -> Callable[
+    [hk.Params, chex.PRNGKey, chex.Array, chex.Array, Any, bool],
+    tuple[float, Any],
+]:
   """Returns the loss function for update_parameters_in_chunks."""
 
   def loss_fn(params, rng, inputs, targets, init_state, last_chunk: bool):
@@ -144,7 +146,7 @@ def _make_chunks_loss_fn(
         will be an ArrayTree (like LSTM state).
       last_chunk: Whether the loss is computed for the last chunk or not.
     """
-    output, states = agent.unroll(params, rng, inputs, init_state)
+    output, states = predictor.unroll(params, rng, inputs, init_state)
     last_state = _get_last_state(states)
     if last_chunk:
       output = output[:, :-1]
@@ -248,33 +250,38 @@ def train(config: config_lib.ExperimentConfig,
     sample_batch = functools.partial(
         data_generator.sample,
         batch_size=config.train.batch_size,
-        seq_length=config.train.seq_length)
+        seq_length=config.train.seq_length,
+    )
   else:
     sample_batch = functools.partial(
-        data_generator.sample, batch_size=config.train.batch_size)
+        data_generator.sample, batch_size=config.train.batch_size
+    )
   frames_per_batch = config.train.batch_size * config.train.seq_length
 
   if config.train.seq_length_fixed:
     dummy_input, _ = sample_batch(rng=jrandom.PRNGKey(0))
   else:
     dummy_input, _ = sample_batch(
-        rng=jrandom.PRNGKey(0), seq_length=config.train.seq_length)
-  # No need to use the full batch size for params/config initialization.
-  # Spares time and memory to only use batch_size = 1.
+        rng=jrandom.PRNGKey(0), seq_length=config.train.seq_length
+    )
+  # No need to use the full batch size for params/config initialization.
+  # Spares time and memory to only use batch_size = 1.
   dummy_input = dummy_input[:1]
 
-  agent = agent_factories.AGENT_FACTORIES[config.model.model_type.lower()](
+  predictor = predictor_factories.PREDICTOR_FACTORIES[
+      config.model.model_type.lower()
+  ](
       dummy_input.shape[-1],
       config.model.architecture_kwargs,
   )
 
-  evaluator = build_evaluator(agent, config.eval)
+  evaluator = build_evaluator(predictor, config.eval)
 
   if config.train.gradient_chunk_length is None:
-    loss_fn = _make_whole_loss_fn(agent)
+    loss_fn = _make_whole_loss_fn(predictor)
     update_parameters = update_parameters_whole_sequence
   else:
-    loss_fn = _make_chunks_loss_fn(agent)
+    loss_fn = _make_chunks_loss_fn(predictor)
     chunk_length = np.clip(config.train.gradient_chunk_length, 1,
                            config.train.seq_length)
     update_parameters = functools.partial(
@@ -290,19 +297,23 @@ def train(config: config_lib.ExperimentConfig,
   # Update parameters setup.
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
   if config.train.gradient_chunk_length is not None:
-    # We jit the grad function here because the whole update_parameters function
-    # itself is not jitted.
+    # We jit the grad function here because the whole update_parameters function
+    # itself is not jitted.
     grad_fn = jax.jit(grad_fn, static_argnames=('last_chunk',))
 
   model_init_rng = jrandom.PRNGKey(config.train.model_init_seed)
-  dummy_hidden_state = agent.initial_state(
+  dummy_hidden_state = predictor.initial_state(
       None, model_init_rng, config.train.batch_size
   )
-  params = agent.init_params(model_init_rng, dummy_input, dummy_hidden_state)
+  params = predictor.init_params(
+      model_init_rng, dummy_input, dummy_hidden_state
+  )
   opt_state = optimizer.init(params)
 
-  agent_init_state = agent.initial_state(params, None, config.train.batch_size)
-  agent_eval_init_state = agent.initial_state(
+  predictor_init_state = predictor.initial_state(
+      params, None, config.train.batch_size
+  )
+  predictor_eval_init_state = predictor.initial_state(
       params, None, config.eval.batch_size
   )
 
@@ -324,19 +335,20 @@ def train(config: config_lib.ExperimentConfig,
         grad_fn=grad_fn,
         optimizer=optimizer,
         opt_state=opt_state,
-        init_state=agent_init_state,
+        init_state=predictor_init_state,
     )
-    if not config.train.reset_agent_init_state:
-      agent_init_state = train_log_dict['last_state']
+    if not config.train.reset_predictor_init_state:
+      predictor_init_state = train_log_dict['last_state']
 
     if (
         0 < config.logger.log_frequency
         and step % config.logger.log_frequency == 0
     ):
       eval_log_dict = evaluator.step(
-          agent_params=params,
-          agent_state=agent_eval_init_state,
-          rng=next(rng_seq))
+          predictor_params=params,
+          predictor_state=predictor_eval_init_state,
+          rng=next(rng_seq),
+      )
 
       train_log_dict = jax.device_get(train_log_dict)
       eval_log_dict = jax.device_get(eval_log_dict)

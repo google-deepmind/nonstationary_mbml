@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""LiveAndDie agent classes."""
+"""LiveAndDie predictor classes."""
 
 import copy
 from typing import Any
@@ -22,7 +22,7 @@ import chex
 import haiku as hk
 import numpy as np
 
-from nonstationary_mbml import agents
+from nonstationary_mbml import predictors
 
 
 @chex.dataclass
@@ -56,13 +56,13 @@ class LADState:
   timestep: int
 
 
-class LADAgent(agents.Agent):
+class LADPredictor(predictors.Predictor):
   """Linear Live and Die estimator predictor.
 
   WARNING:
     LAD outputs a prediction before seeing the first token, which is
-    inconsistent with our agent interface. Thus, we omit the first prediction
-    and append a dummy output at the end.
+    inconsistent with our predictor interface. Thus, we omit the first
+    prediction and append a dummy output at the end.
   """
 
   def initial_state(
@@ -121,8 +121,8 @@ class LADAgent(agents.Agent):
     predictions = np.stack(predictions, axis=0)
 
     # LAD outputs a prediction before seeing the first token, which is
-    # inconsistent with our agent interface. Thus, we omit the first prediction
-    # and append a dummy output at the end.
+    # inconsistent with our predictor interface. Thus, we omit the first
+    # prediction and append a dummy output at the end.
     predictions = np.concatenate(
         [predictions[1:],
          np.full_like(predictions[:1], np.nan)], axis=0)

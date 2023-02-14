@@ -68,12 +68,13 @@ class EvalConfig(config_lib.EvalConfig):
   """Config for the evaluator."""
   # Sequence length used for evaluation, None means same as training.
   seq_length: Optional[int] = None
-  # Chunk size to use at evaluation time. None means use the sequence length.
+  # Chunk size to use at evaluation time. None means use the sequence length.
   chunk_length: Optional[int] = None
-  # See constants.py for possible optimal agents.
-  optimal_agents: Optional[Sequence[str]] = None
-  optimal_agents_kwargs: dict[str, dict[str, Any]] = dataclasses.field(
-      default_factory=dict)
+  # See constants.py for possible optimal predictors.
+  optimal_predictors: Optional[Sequence[str]] = None
+  optimal_predictors_kwargs: dict[str, dict[str, Any]] = dataclasses.field(
+      default_factory=dict
+  )
   data: Optional[DataConfig] = None  # Which data distrib to use for evaluation.
 
 
@@ -93,13 +94,13 @@ class ExperimentSweep(config_lib.ExperimentSweep):
 
 def post_process_config(config: ExperimentConfig) -> None:
   """Processes a config at launch time, in place."""
-  # Setting the stack size for the stack-RNN.
+  # Setting the stack size for the stack-RNN.
   if config.model.model_type == 'rnn':
     if config.model.architecture_kwargs['core'] == stack_rnn.StackRNNCore:
       if config.model.architecture_kwargs['stack_size'] is None:
         config.model.architecture_kwargs['stack_size'] = config.train.seq_length
 
-  # Setting the context size for the Transformer.
+  # Setting the context size for the Transformer.
   if config.model.model_type == 'sliding_window_transformer':
     if config.model.architecture_kwargs['context_length'] is None:
       if config.train.gradient_chunk_length is None:
@@ -117,7 +118,8 @@ def post_process_config(config: ExperimentConfig) -> None:
   if config.eval.seq_length is None:
     config.eval.seq_length = config.train.seq_length
 
-  if 'ptw' in config.eval.optimal_agents:
-    if config.eval.optimal_agents_kwargs['ptw']['depth'] is None:
-      config.eval.optimal_agents_kwargs['ptw']['depth'] = math.ceil(
-          math.log2(config.eval.seq_length))
+  if 'ptw' in config.eval.optimal_predictors:
+    if config.eval.optimal_predictors_kwargs['ptw']['depth'] is None:
+      config.eval.optimal_predictors_kwargs['ptw']['depth'] = math.ceil(
+          math.log2(config.eval.seq_length)
+      )
