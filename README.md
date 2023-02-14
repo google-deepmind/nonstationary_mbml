@@ -1,25 +1,88 @@
-# nonstationary_mbml
+# Memory-Based Meta-Learning on Non-Stationary Distributions
 
-TODO(b/267433594): Add a description for your new project, explain what is
-being released here, etc... Additional, the following sections are normally
-expected for all releases. Feel free to add additional sections if appropriate
-for your project.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/deepmind/nonstationary_mbml/master/overview.svg" alt="Overview figure"/>
+</p>
+
+This repository provides an implementation of the paper [Memory-Based Meta-Learning on Non-Stationary Distributions]().
+
+> Memory-based meta-learning is a technique for approximating Bayes-optimal predictors.
+> Under fairly general conditions, minimizing sequential prediction error, measured by the log loss, leads to implicit meta-learning.
+> The goal of this work is to investigate how far this interpretation can be realized by current sequence prediction models and training regimes.
+> The focus is on piecewise stationary sources with unobserved switching-points, which arguably capture an important characteristic of natural language and action-observation sequences in partially observable environments.
+> We show that various types of memory-based neural models, including Transformers, LSTMs, and RNNs, can learn to accurately approximate known Bayes-optimal algorithms and behave as if performing Bayesian inference over the latent switching-points and the latent parameters governing the data distribution within each segment.
+
+It is based on [JAX](https://jax.readthedocs.io) and [Haiku](https://dm-haiku.readthedocs.io) and contains all code, datasets, and models necessary to reproduce the paper's results.
+
+
+## Content
+
+```
+.
+├── experiments
+|   ├── config.py                   - Experiment configurations
+|   ├── constants.py                - Experiment constants
+|   ├── distributions.py            - Probability distributions
+|   ├── evaluator.py                - Evaluation loop
+|   └── live_and_die_agents.py      - LAD (Willems, 1996)
+|   └── local_launch.py             - Local launch script
+|   └── ptw_agents.py               - PTW (Veness et al., 2013)
+|   └── trajectory_generators.py    - Trajectory generators
+|
+├── models
+|   ├── basic.py                    - CNNs, MLPs, RNNs
+|   └── positional_encodings.py     - ALiBi (Press et al., 2022), relative (Dai et al., 2019), sin/cos (Vaswani et al., 2017)
+|   ├── stack_rnn.py                - Stack-RNN (Joulin & Mikolov, 2015)
+|   └── transformer.py              - Transformer (Vaswani et al., 2017)
+|
+├── README.md
+├── agent_factories.py              - Factories to initialize agents
+├── agents.py                       - Agent interface
+├── base_config.py                  - Base configurations
+├── base_constants.py               - Base constants
+├── requirements.txt                - Dependencies
+└── train.py                        - Training loop
+```
+
 
 ## Installation
 
-Write instructions for how the user should install your code. The instructions
-should ideally be valid when copy-pasted. You can combine this with the Usage
-section if there's no separate installation step.
+```
+pip install -r requirements.txt
+```
+
 
 ## Usage
 
-Write example usage of your code. The instructions should ideally be valid when
-copy-pasted, and will be used by your technical reviewer to verify that your
-package functions correctly.
+```
+python experiments/local_launch.py
+```
+
+The experiment configurations can be adjusted in `base_config.py` and
+`experiments/config.py`.
+
 
 ## Citing this work
 
-Add citation details here, usually a pastable BibTeX snippet.
+```bibtex
+@article{genewein2023memory,
+  author    = {Tim Genewein and
+               Gr{\'{e}}goire Del{\'{e}}tang and
+               Anian Ruoss and
+               Li Kevin Wenliang and
+               Elliot Catt and
+               Vincent Dutordoir and
+               Jordi Grau-Moya and
+               Laurent Orseau and
+               Marcus Hutter and
+               Joel Veness},
+  title     = {Memory-Based Meta-Learning on Non-Stationary Distributions},
+  journal   = {CoRR},
+  volume    = {abs/2302.03067},
+  year      = {2023},
+}
+```
+
 
 ## License and disclaimer
 
