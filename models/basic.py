@@ -116,6 +116,6 @@ def make_rnn(
     if not return_all_states:
       return output
     else:
-      return output, all_states
+      return output, all_states  # pytype: disable=bad-return-type  # jax-ndarray
 
   return rnn_model
