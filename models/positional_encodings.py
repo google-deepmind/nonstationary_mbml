@@ -111,8 +111,8 @@ def sinusoid_position_encoding(
   return pos_emb
 
 
-def _rel_shift_inner(logits: jnp.DeviceArray,
-                     attention_length: int) -> jnp.DeviceArray:
+def _rel_shift_inner(logits: jax.Array,
+                     attention_length: int) -> jax.Array:
   """Shifts the relative logits.
 
   This is a more general than the original Transformer-XL implementation as
@@ -152,7 +152,7 @@ def _rel_shift_inner(logits: jnp.DeviceArray,
   return logits
 
 
-def _rel_shift_causal(logits: jnp.DeviceArray) -> jnp.DeviceArray:
+def _rel_shift_causal(logits: jax.Array) -> jax.Array:
   """Shifts the relative logits, assuming causal attention.
 
   Given inputs:
@@ -183,9 +183,9 @@ def _rel_shift_causal(logits: jnp.DeviceArray) -> jnp.DeviceArray:
   return jnp.reshape(x, [t1, t2])
 
 
-def relative_shift(logits: jnp.DeviceArray,
+def relative_shift(logits: jax.Array,
                    attention_length: int,
-                   causal: bool = False) -> jnp.DeviceArray:
+                   causal: bool = False) -> jax.Array:
   if causal:
     fn = _rel_shift_causal
   else:
