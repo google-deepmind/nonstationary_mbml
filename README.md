@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/deepmind/nonstationary_mbml/master/overview.svg" alt="Overview figure"/>
 </p>
 
-This repository provides an implementation of the paper [Memory-Based Meta-Learning on Non-Stationary Distributions]().
+This repository provides an implementation of the paper [Memory-Based Meta-Learning on Non-Stationary Distributions](https://arxiv.org/abs/2302.03067).
 
 > Memory-based meta-learning is a technique for approximating Bayes-optimal predictors.
 > Under fairly general conditions, minimizing sequential prediction error, measured by the log loss, leads to implicit meta-learning.
