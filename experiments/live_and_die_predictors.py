@@ -107,7 +107,7 @@ class LADPredictor(predictors.Predictor):
     ) -> tuple[chex.Array, chex.Array]:
       pred = self.output_from_state(state)
       new_state = self.update(state, x.argmax(-1))
-      return new_state, pred
+      return new_state, pred  # pytype: disable=bad-return-type  # numpy-scalars
 
     # Change to time-major layout since we unroll over the leading dimension.
     batch = batch.swapaxes(0, 1)

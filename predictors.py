@@ -111,7 +111,7 @@ class InContextPredictor(Predictor):
              init_state: Optional[chex.Array]) -> chex.Array:
     del init_state
     output = self._predictor_apply(params, rng, batch)
-    return output, None
+    return output, None  # pytype: disable=bad-return-type  # numpy-scalars
 
 
 class RNNPredictor(Predictor):

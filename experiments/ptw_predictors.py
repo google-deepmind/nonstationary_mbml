@@ -152,41 +152,41 @@ class PTWPredictor(predictors.Predictor, abc.ABC):
                    x: chex.Array) -> chex.Array:
     d = self.d
 
-    t = state.t
+    t = state.t  # pytype: disable=attribute-error  # numpy-scalars
     i = _mscb(d, t + 1)
 
-    state.b[:, i] = state.w[:, i + 1]
+    state.b[:, i] = state.w[:, i + 1]  # pytype: disable=attribute-error  # numpy-scalars
     # Doing the reset
-    state.b[:, i + 1:d + 1] = 0
-    state.w[:, i + 1:d + 1] = 0
+    state.b[:, i + 1:d + 1] = 0  # pytype: disable=attribute-error  # numpy-scalars
+    state.w[:, i + 1:d + 1] = 0  # pytype: disable=attribute-error  # numpy-scalars
 
-    state.kt.reset(range(i + 1, d + 1))
+    state.kt.reset(range(i + 1, d + 1))  # pytype: disable=attribute-error  # numpy-scalars
 
-    state.kt.update(x, d)
-    state.w[:, d] = state.kt.marg[:, d]
+    state.kt.update(x, d)  # pytype: disable=attribute-error  # numpy-scalars
+    state.w[:, d] = state.kt.marg[:, d]  # pytype: disable=attribute-error  # numpy-scalars
 
     for j in range(d - 1, -1, -1):
-      state.kt.update(x, j)
-      lhs = np.log(0.5) + state.kt.marg[:, j]
-      rhs = np.log(0.5) + state.w[:, j + 1] + state.b[:, j]
+      state.kt.update(x, j)  # pytype: disable=attribute-error  # numpy-scalars
+      lhs = np.log(0.5) + state.kt.marg[:, j]  # pytype: disable=attribute-error  # numpy-scalars
+      rhs = np.log(0.5) + state.w[:, j + 1] + state.b[:, j]  # pytype: disable=attribute-error  # numpy-scalars
       wi = array_log_add(lhs, rhs)
-      state.w[:, j] = wi
+      state.w[:, j] = wi  # pytype: disable=attribute-error  # numpy-scalars
 
-    state.t = state.t + 1
+    state.t = state.t + 1  # pytype: disable=attribute-error  # numpy-scalars
 
     return state
 
   def output_from_state(self, rng: chex.PRNGKey,
                         state: chex.Array) -> chex.Array:
 
-    wx = state.w[:, 0]
+    wx = state.w[:, 0]  # pytype: disable=attribute-error  # numpy-scalars
     cp_state = copy.deepcopy(state)
 
     batch_size = wx.shape[0]
     ones = np.repeat(np.asarray([[1, 0]]), batch_size, axis=0)
     cp_state = self.update_state(rng, cp_state, ones)
 
-    output = cp_state.w[:, 0] - wx
+    output = cp_state.w[:, 0] - wx  # pytype: disable=attribute-error  # numpy-scalars
     output = np.stack([output, np.log(1 - np.exp(output))], axis=-1)
 
     return output

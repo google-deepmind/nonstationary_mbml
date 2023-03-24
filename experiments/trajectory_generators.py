@@ -290,7 +290,7 @@ class RandomShiftNoMemoryTrajectoryGenerator(DynamicTrajectoryGenerator):
     initial_time = 0
     first_delta = self._sample_delta_shift_time(rng, batch_size)
     next_shift_time = initial_time + first_delta
-    return init_params, next_shift_time
+    return init_params, next_shift_time  # pytype: disable=bad-return-type  # numpy-scalars
 
   def update_params(
       self,
@@ -553,7 +553,7 @@ class IIDPTWRandomShiftCategoricalTrajectoryGenerator(TrajectoryGenerator):
 class LINTrajectoryGenerator(DynamicTrajectoryGenerator):
   """Draws IID trajectories from the linear model defined by Willems 1996."""
 
-  def _initial_state(
+  def _initial_state(  # pytype: disable=signature-mismatch  # numpy-scalars
       self,
       rng: chex.PRNGKey,
       batch_size: int,

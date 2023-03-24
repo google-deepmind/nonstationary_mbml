@@ -111,7 +111,7 @@ class SlidingWindowTransformer:
         f=num_features,
     )
     out = jax.vmap(self._transformer, in_axes=1, out_axes=1)(x_batched_history)
-    return einops.rearrange(
+    return einops.rearrange(  # pytype: disable=bad-return-type  # numpy-scalars
         out,
         'b h c o -> b (h c) o',
         b=batch_size,
