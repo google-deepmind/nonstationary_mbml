@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/deepmind/nonstationary_mbml/master/overview.svg" alt="Overview figure"/>
 </p>
 
-This repository provides an implementation of the paper [Memory-Based Meta-Learning on Non-Stationary Distributions](https://arxiv.org/abs/2302.03067).
+This repository provides an implementation of our ICML 2023 paper [Memory-Based Meta-Learning on Non-Stationary Distributions](https://arxiv.org/abs/2302.03067).
 
 > Memory-based meta-learning is a technique for approximating Bayes-optimal predictors.
 > Under fairly general conditions, minimizing sequential prediction error, measured by the log loss, leads to implicit meta-learning.
@@ -65,7 +65,7 @@ The experiment configurations can be adjusted in `base_config.py` and
 ## Citing this work
 
 ```bibtex
-@article{genewein2023memory,
+@inproceedings{genewein2023memory,
   author    = {Tim Genewein and
                Gr{\'{e}}goire Del{\'{e}}tang and
                Anian Ruoss and
@@ -77,8 +77,7 @@ The experiment configurations can be adjusted in `base_config.py` and
                Marcus Hutter and
                Joel Veness},
   title     = {Memory-Based Meta-Learning on Non-Stationary Distributions},
-  journal   = {CoRR},
-  volume    = {abs/2302.03067},
+  booktitle = {International Conference on Machine Learning},
   year      = {2023},
 }
 ```
