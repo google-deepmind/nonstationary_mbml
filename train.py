@@ -19,7 +19,7 @@ import copy
 import functools
 import math
 import random
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 import chex
 import haiku as hk
@@ -107,19 +107,19 @@ def update_parameters_whole_sequence(
 @functools.partial(jax.jit, static_argnames=('optimizer'))
 def _compute_updates_from_chunks(
     params: hk.Params,
-    losses: List[float],
-    grads: List[chex.ArrayTree],
+    losses: list[float],
+    grads: list[chex.ArrayTree],
     optimizer: optax.GradientTransformation,
     opt_state: optax.OptState,
 ):
   """Returns updates from the list of gradients of the chunks."""
-  # Compute the mean of losses across chunks.
+  # Compute the mean of losses across chunks.
   loss = jnp.mean(jnp.array(losses))
   # Compute the mean of gradients across chunks.
   avg_grads_fn = lambda *g: functools.reduce(jax.lax.add, g) / len(g)
   grad = jax.tree_util.tree_map(avg_grads_fn, *grads)
 
-  # Classical update of parameters with the mean of gradients.
+  # Classical update of parameters with the mean of gradients.
   updates, new_opt_state = optimizer.update(grad, opt_state)
   new_params = optax.apply_updates(params, updates)
   return loss, grad, new_params, new_opt_state

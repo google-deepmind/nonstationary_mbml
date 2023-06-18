@@ -21,7 +21,7 @@ This file contains builders for different simple models:
 - RNN/LSTM
 """
 
-from typing import Any, Callable, Mapping, Optional, Sequence, Type
+from typing import Any, Callable, Mapping, Optional, Sequence
 
 import chex
 import haiku as hk
@@ -67,7 +67,7 @@ def make_mlp(hidden_layers_sizes: Sequence[int],
 
 def make_rnn(
     output_size: int,
-    rnn_core: Type[hk.RNNCore],
+    rnn_core: type[hk.RNNCore],
     return_all_outputs: bool = False,
     return_all_states: bool = False,
     input_window: int = 1,

@@ -21,7 +21,7 @@ be uniquely identified by its name.
 """
 
 import functools
-from typing import Any, Callable, Optional, Sequence, Type
+from typing import Any, Callable, Optional, Sequence
 
 import einops
 import haiku as hk
@@ -64,7 +64,7 @@ class MLPWrappedRNN(hk.RNNCore):
 
   def __init__(
       self,
-      core: Type[hk.RNNCore],
+      core: type[hk.RNNCore],
       before_mlp_layers: Sequence[int] = (),
       after_mlp_layers: Sequence[int] = (),
       **core_kwargs
@@ -124,7 +124,7 @@ class SlidingWindowTransformer:
 def _make_rnn_predictor(
     output_size: int,
     architecture_config: _Config,
-    rnn_core: Type[hk.RNNCore],
+    rnn_core: type[hk.RNNCore],
 ) -> predictors.Predictor:
   """Returns an RNN predictor based on config."""
   unroll_factory = basic.make_rnn(

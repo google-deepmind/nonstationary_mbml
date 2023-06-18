@@ -25,7 +25,7 @@ only and therefore no RL is required. The stack and state update are just linear
 combinations of the last states and these probabilities.
 """
 
-from typing import Any, Mapping, Optional, Tuple, Type
+from typing import Any, Mapping, Optional
 
 import chex
 from einshape import jax_einshape as einshape
@@ -36,7 +36,7 @@ import jax.numpy as jnp
 
 
 # First element is the stacks, second is the hidden internal state.
-_StackRnnState = Tuple[chex.Array, chex.Array]
+_StackRnnState = tuple[chex.Array, chex.Array]
 
 # Number of actions the stack-RNN can take, namely POP, PUSH and NO_OP.
 _NUM_ACTIONS = 3
@@ -120,13 +120,15 @@ def _update_stack(stack: chex.Array, actions: chex.Array,
 class StackRNNCore(hk.RNNCore):
   """Core for the stack RNN."""
 
-  def __init__(self,
-               stack_cell_size: int,
-               stack_size: int = 30,
-               n_stacks: int = 1,
-               inner_core: Type[hk.RNNCore] = hk.VanillaRNN,
-               name: Optional[str] = None,
-               **inner_core_kwargs: Mapping[str, Any]):
+  def __init__(
+      self,
+      stack_cell_size: int,
+      stack_size: int = 30,
+      n_stacks: int = 1,
+      inner_core: type[hk.RNNCore] = hk.VanillaRNN,
+      name: Optional[str] = None,
+      **inner_core_kwargs: Mapping[str, Any]
+  ):
     """Initializes.
 
     Args:
@@ -144,8 +146,9 @@ class StackRNNCore(hk.RNNCore):
     self._stack_size = stack_size
     self._n_stacks = n_stacks
 
-  def __call__(self, inputs: chex.Array,
-               prev_state: _StackRnnState) -> Tuple[chex.Array, _StackRnnState]:
+  def __call__(
+      self, inputs: chex.Array, prev_state: _StackRnnState
+  ) -> tuple[chex.Array, _StackRnnState]:
     """Steps the stack RNN core.
 
     See base class docstring.
