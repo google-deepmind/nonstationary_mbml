@@ -90,6 +90,9 @@ class ExperimentConfig:
 @dataclasses.dataclass
 class ExperimentSweep:
   """A sweep to be passed to the experiment launcher, with parameter sweeps."""
+
   general_sweep: Iterator[dict[str, Any]]
   specific_sweeps: Mapping[str, Mapping[str, Iterator[Mapping[str, Any]]]]
-  base_config: ExperimentConfig = ExperimentConfig()
+  base_config: ExperimentConfig = dataclasses.field(
+      default_factory=ExperimentConfig
+  )

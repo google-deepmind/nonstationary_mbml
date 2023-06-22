@@ -89,7 +89,10 @@ class ExperimentConfig(config_lib.ExperimentConfig):
 @dataclasses.dataclass
 class ExperimentSweep(config_lib.ExperimentSweep):
   """Needed inheritance to avoid typing error."""
-  base_config: ExperimentConfig = ExperimentConfig()
+
+  base_config: ExperimentConfig = dataclasses.field(
+      default_factory=ExperimentConfig
+  )
 
 
 def post_process_config(config: ExperimentConfig) -> None:
