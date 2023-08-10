@@ -88,8 +88,9 @@ def make_rnn(
     **rnn_kwargs: Kwargs to be passed to the RNN core.
   """
 
-  def rnn_model(x: jnp.array,
-                initial_state: Optional[Any] = None) -> jnp.ndarray:
+  def rnn_model(
+      x: jnp.ndarray, initial_state: Optional[Any] = None
+  ) -> jnp.ndarray:
     core = rnn_core(**rnn_kwargs)
     if initial_state is None:
       initial_state = core.initial_state(x.shape[0])
