@@ -74,7 +74,7 @@ class MetaLearningEvaluator(base_constants.Evaluator):
 
       for predictor_name, optimal_predictor in self._optimal_predictors.items():
         self._optimal_predictors_init_state[predictor_name] = (
-            optimal_predictor.initial_state(None, None, batch_size=batch_size)
+            optimal_predictor.initial_state(None, None, batch_size=batch_size)  # pytype: disable=wrong-arg-types
         )
 
   def step(

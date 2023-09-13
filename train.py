@@ -310,10 +310,10 @@ def train(config: config_lib.ExperimentConfig,
   )
   opt_state = optimizer.init(params)
 
-  predictor_init_state = predictor.initial_state(
+  predictor_init_state = predictor.initial_state(  # pytype: disable=wrong-arg-types
       params, None, config.train.batch_size
   )
-  predictor_eval_init_state = predictor.initial_state(
+  predictor_eval_init_state = predictor.initial_state(  # pytype: disable=wrong-arg-types
       params, None, config.eval.batch_size
   )
 
