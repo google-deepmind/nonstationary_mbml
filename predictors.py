@@ -254,7 +254,7 @@ class OptimalPredictor(ScanPredictor, abc.ABC):
     Returns:
       state: array of shape (batch_size, parameter_size)
     """
-    return jnp.concatenate(state_elements, axis=-1)
+    return jnp.concatenate(state_elements, axis=-1)  # pytype: disable=wrong-arg-types  # jnp-type
 
 
 class OptimalCategoricalPredictor(OptimalPredictor):

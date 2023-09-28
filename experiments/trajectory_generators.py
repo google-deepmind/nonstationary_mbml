@@ -559,7 +559,7 @@ class LINTrajectoryGenerator(DynamicTrajectoryGenerator):
       batch_size: int,
   ) -> tuple[int, chex.Array]:
     init_parameters = super()._initial_state(rng, batch_size)
-    return (jnp.ones((batch_size,)), init_parameters)
+    return (jnp.ones((batch_size,)), init_parameters)  # pytype: disable=bad-return-type  # jnp-type
 
   def update_params(
       self,
